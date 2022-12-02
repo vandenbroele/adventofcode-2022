@@ -1,6 +1,6 @@
 namespace Day2.Tests;
 
-public class ScoreTests
+public class ScorePart1Tests
 {
     [Test]
     [TestCase('A', 1)]
@@ -11,7 +11,7 @@ public class ScoreTests
     [TestCase('Z', 3)]
     public void CalculateHand_Validation(char hand, int expectedValue)
     {
-        Assert.AreEqual(expectedValue, Score.CalculateHand(hand));
+        Assert.AreEqual(expectedValue, ScorePart1.CalculateHand(hand));
     }
 
     [Test]
@@ -20,7 +20,7 @@ public class ScoreTests
     [TestCase('C', 'Z', 3)]
     public void CalculateRoundOutcome_DrawValidation(char hand1, char hand2, int expectedValue)
     {
-        Assert.AreEqual(expectedValue, Score.CalculateRoundOutcome(hand1, hand2));
+        Assert.AreEqual(expectedValue, ScorePart1.CalculateRoundOutcome(hand1, hand2));
     }
 
     [Test]
@@ -29,7 +29,7 @@ public class ScoreTests
     [TestCase('C', 'X', 6)]
     public void CalculateRoundOutcome_WinValidation(char hand1, char hand2, int expectedValue)
     {
-        Assert.AreEqual(expectedValue, Score.CalculateRoundOutcome(hand1, hand2));
+        Assert.AreEqual(expectedValue, ScorePart1.CalculateRoundOutcome(hand1, hand2));
     }
 
     [Test]
@@ -38,15 +38,19 @@ public class ScoreTests
     [TestCase('C', 'Y', 0)]
     public void CalculateRoundOutcome_LoseValidation(char hand1, char hand2, int expectedValue)
     {
-        Assert.AreEqual(expectedValue, Score.CalculateRoundOutcome(hand1, hand2));
+        Assert.AreEqual(expectedValue, ScorePart1.CalculateRoundOutcome(hand1, hand2));
     }
 
     [Test]
     [TestCase('A', 'Y', 8)]
     [TestCase('B', 'X', 1)]
     [TestCase('C', 'Z', 6)]
+    // Validate self
+    [TestCase('A', 'B', 8)]
+    [TestCase('B', 'A', 1)]
+    [TestCase('C', 'C', 6)]
     public void CalculateRound_Validation(char hand1, char hand2, int expectedValue)
     {
-        Assert.AreEqual(expectedValue, Score.CalculateRound(hand1, hand2));
+        Assert.AreEqual(expectedValue, ScorePart1.CalculateRound(hand1, hand2));
     }
 }
