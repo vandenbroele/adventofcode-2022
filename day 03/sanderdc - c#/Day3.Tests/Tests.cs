@@ -25,26 +25,22 @@ public class Tests
     }
 
     [Test]
-    [TestCase(
-        "JrwpWtwJgWrhcsFMMfFFhFp",
-        "jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL",
-        "PmmdzqPrVvPwwTWBwg",
+    [TestCase(new[]
+        {
+            "JrwpWtwJgWrhcsFMMfFFhFp",
+            "jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL",
+            "PmmdzqPrVvPwwTWBwg"
+        },
         'r')]
-    [TestCase(
-        "wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn",
-        "ttgJtRGJQctTZtZT",
-        "CrZsJsPPZsGzwwsLwLmpwMDw",
+    [TestCase(new[]
+        {
+            "wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn",
+            "ttgJtRGJQctTZtZT",
+            "CrZsJsPPZsGzwwsLwLmpwMDw"
+        },
         'Z')]
-    public void Overlap_Validate(string input1, string input2, string input3, char expected)
+    public void Overlap_Validate(string[] input, char expected)
     {
-        Assert.AreEqual(expected, Helpers.GetOverlap(input1, input2, input3));
-    }
-
-    [Test]
-    [TestCase(new[] { "", "", "" }, 1)]
-    [TestCase(new[] { "", "", "", "", "", "" }, 2)]
-    public void Chunk_Validate(IEnumerable<string> input, int expectedChunks)
-    {
-        Assert.AreEqual(expectedChunks, input.Chunk().Count());
+        Assert.AreEqual(expected, Helpers.GetOverlap(input));
     }
 }
