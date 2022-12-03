@@ -23,4 +23,28 @@ public class Tests
     {
         Assert.AreEqual(expected, Helpers.GetOverlap(input));
     }
+
+    [Test]
+    [TestCase(
+        "JrwpWtwJgWrhcsFMMfFFhFp",
+        "jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL",
+        "PmmdzqPrVvPwwTWBwg",
+        'r')]
+    [TestCase(
+        "wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn",
+        "ttgJtRGJQctTZtZT",
+        "CrZsJsPPZsGzwwsLwLmpwMDw",
+        'Z')]
+    public void Overlap_Validate(string input1, string input2, string input3, char expected)
+    {
+        Assert.AreEqual(expected, Helpers.GetOverlap(input1, input2, input3));
+    }
+
+    [Test]
+    [TestCase(new[] { "", "", "" }, 1)]
+    [TestCase(new[] { "", "", "", "", "", "" }, 2)]
+    public void Chunk_Validate(IEnumerable<string> input, int expectedChunks)
+    {
+        Assert.AreEqual(expectedChunks, input.Chunk().Count());
+    }
 }
