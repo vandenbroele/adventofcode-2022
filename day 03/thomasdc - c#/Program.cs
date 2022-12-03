@@ -1,25 +1,25 @@
 ﻿Console.WriteLine(
     (
-        from line in File.ReadAllLines("input.txt")
-        let firstHalf = line[..(line.Length / 2)]
-        let secondHalf = line[^(line.Length / 2)..]
-        select firstHalf.Intersect(secondHalf))
-    .SelectMany(_ => _)
-    .Select(_ => (int) _)
-    .Sum(c => c switch
-    {
-        >= 'a' => c - 'a' + 1,
-        >= 'A' => c - 'A' + 27,
-        _ => 0
-    }));
+        from line in
+            from line in File.ReadAllLines("input.txt")
+            let firstHalf = line[..(line.Length / 2)]
+            let secondHalf = line[^(line.Length / 2)..]
+            select firstHalf.Intersect(secondHalf)
+        from c in line
+        select c switch
+        {
+            >= 'a' => c - 'a' + 1,
+            >= 'A' => c - 'A' + 27,
+            _ => 0
+        }
+    ).Sum());
 
 Console.WriteLine(File.ReadAllLines("input.txt").Chunk(3)
     .Sum(group => (
         from g in
             from line in @group
             from @char in line.Distinct()
-            let intChar = (int) @char
-            group intChar by intChar
+            group @char by (int) @char
         where g.Count() == 3
         select g.Key switch
         {
