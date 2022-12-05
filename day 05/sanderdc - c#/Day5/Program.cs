@@ -28,20 +28,22 @@ IEnumerable<string> moves = lines.Skip(10);
 
 foreach (string move in moves)
 {
-    Console.WriteLine(move);
+    // Console.WriteLine(move);
 
     string[] splitInput = move.Split(' ');
     int count = int.Parse(splitInput[1]);
     int from = int.Parse(splitInput[3]);
     int to = int.Parse(splitInput[5]);
 
-    for (int i = 0; i < count; i++)
-    {
-        stacks.Move(from - 1, to - 1);
-    }
+    // for (int i = 0; i < count; i++)
+    // {
+    //     stacks.Move(from - 1, to - 1);
+    // }
+    stacks.MoveStack(from-1, to-1, count);
 }
 
-Console.WriteLine($"part 1: {string.Join("", stacks.GetTops())}");
+Console.WriteLine($"part 2: {string.Join("", stacks.GetTops())}");
+
 
 
 internal class Stacks
@@ -65,6 +67,21 @@ internal class Stacks
     public void Move(int from, int to)
     {
         stacks[to].Push(stacks[from].Pop());
+    }
+
+    public void MoveStack(int from, int to, int count)
+    {
+        List<char> temp = new(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            temp.Add(stacks[from].Pop());
+        }
+
+        for (int i = temp.Count - 1; i >= 0; i--)
+        {
+            stacks[to].Push(temp[i]);
+        }
     }
 
     public IEnumerable<char> GetTops() => stacks.Select(stack => stack.Peek());
