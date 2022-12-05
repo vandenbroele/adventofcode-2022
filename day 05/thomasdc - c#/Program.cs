@@ -27,9 +27,16 @@ foreach (var instruction in lines.Skip(height + 2))
     var count = int.Parse(match.Groups["count"].Value);
     var from = int.Parse(match.Groups["from"].Value) - 1;
     var to = int.Parse(match.Groups["to"].Value) - 1;
+    var sub = new List<char>();
     for (var box = 0; box < count; box++)
     {
-        stacks[to].Push(stacks[from].Pop());
+        sub.Add(stacks[from].Pop());
+    }
+
+    sub.Reverse();
+    foreach (var s in sub)
+    {
+        stacks[to].Push(s);
     }
 }
 
