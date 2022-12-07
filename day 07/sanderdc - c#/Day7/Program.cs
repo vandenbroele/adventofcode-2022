@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Text;
 using NUnit.Framework;
 
@@ -15,12 +14,27 @@ namespace Day7
             File.ReadAllText("./input.txt");
             Dir root = Parse(File.ReadAllLines("./input.txt"));
 
-            int sum = root.Traverse()
+            int result1 = root.Traverse()
                 .Select(d => d.CalculateSize())
                 .Where(size => size <= 100000)
                 .Sum();
 
-            Console.WriteLine($"part 1: {sum}");
+            Console.WriteLine($"part 1: {result1}");
+
+            const int maxSpace = 70000000;
+            const int requiredSpace = 30000000;
+
+            int usedSpace = root.CalculateSize();
+            int unusedSpace = maxSpace - usedSpace;
+            int toDelete = requiredSpace - unusedSpace;
+
+            int result2 = root.Traverse()
+                .Select(d => d.CalculateSize())
+                .Where(size => size > toDelete)
+                .OrderBy(size => size)
+                .First();
+
+            Console.WriteLine($"part 2: {result2}");
         }
 
         public static Dir Parse(IEnumerable<string> input)
