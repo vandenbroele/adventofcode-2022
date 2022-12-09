@@ -1,63 +1,89 @@
-﻿// IEnumerable<string> input = File.ReadLines("./testInput1.txt");
-// IEnumerable<string> input = File.ReadLines("./testInput2.txt");
-IEnumerable<string> input = File.ReadLines("./input.txt");
-
-
-HashSet<Point> tailTrail = new();
-
-// Point headPos = new(0, 0);
-// Point tailPos = new(0, 0);
-
-List<Point> rope = new()
+﻿int result1 = Execute(new List<Point>
 {
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-    new Point(0, 0),
-};
+    new(0, 0),
+    new(0, 0)
+}, File.ReadLines("./input.txt"));
+Console.WriteLine($"part 1: {result1}");
 
-
-tailTrail.Add(new Point(rope[9].X, rope[9].Y));
-
-foreach (string line in input)
+int result2 = Execute(new List<Point>
 {
-    string[] command = line.Split(' ');
+    new(0, 0),
+    new(0, 0),
+    new(0, 0),
+    new(0, 0),
+    new(0, 0),
+    new(0, 0),
+    new(0, 0),
+    new(0, 0),
+    new(0, 0),
+    new(0, 0)
+}, File.ReadLines("./input.txt"));
+Console.WriteLine($"part 2: {result2}");
 
-    Point dir = command[0] switch
+int Execute(List<Point> list, IEnumerable<string> commands)
+{
+    HashSet<Point> tailTrail = new() { new Point(list[^1].X, list[^1].Y) };
+
+    foreach (string line in commands)
     {
-        "R" => Point.Right,
-        "U" => Point.Up,
-        "L" => Point.Left,
-        "D" => Point.Down,
-        _ => throw new ArgumentOutOfRangeException()
-    };
+        string[] command = line.Split(' ');
 
-    int moves = int.Parse(command[1]);
-
-    for (int i = 0; i < moves; i++)
-    {
-        rope[0].Move(dir);
-
-        for (int index = 1; index < rope.Count; index++)
+        Point dir = command[0] switch
         {
-            Follow(rope[index - 1], rope[index]);
-        }
+            "R" => Point.Right,
+            "U" => Point.Up,
+            "L" => Point.Left,
+            "D" => Point.Down,
+            _ => throw new ArgumentOutOfRangeException()
+        };
 
-        Point tail = rope[^1];
-        tailTrail.Add(new Point(tail.X, tail.Y));
+        int moves = int.Parse(command[1]);
+
+        for (int i = 0; i < moves; i++)
+        {
+            list[0].Move(dir);
+
+            for (int index = 1; index < list.Count; index++)
+            {
+                Follow(list[index - 1], list[index]);
+            }
+
+            Point tail = list[^1];
+            tailTrail.Add(new Point(tail.X, tail.Y));
+        }
     }
 
-    // WriteRopeGrid(rope);
-    // WriteTestGrid(rope[0], rope[9], tailTrail);
+    return tailTrail.Count;
 }
 
-Console.WriteLine(tailTrail.Count);
+void Follow(Point leader, Point follower)
+{
+    int xOffset = leader.X - follower.X;
+    int yOffset = leader.Y - follower.Y;
+
+    if (xOffset == 0 && yOffset == 0)
+    {
+        // Do nothing
+    }
+    else if (FullDiagonal(xOffset, yOffset))
+    {
+        follower.Move(new Point(xOffset / 2, yOffset / 2));
+    }
+    else if (Math.Abs(xOffset) == 2)
+    {
+        follower.Move(Math.Abs(yOffset) == 1
+            ? new Point(xOffset / 2, yOffset)
+            : new Point(xOffset / 2, 0));
+    }
+    else if (Math.Abs(yOffset) == 2)
+    {
+        follower.Move(Math.Abs(xOffset) == 1
+            ? new Point(xOffset, yOffset / 2)
+            : new Point(0, yOffset / 2));
+    }
+}
+
+bool FullDiagonal(int offsetX, int offsetY) => Math.Abs(offsetX) == 2 && Math.Abs(offsetY) == 2;
 
 void WriteRopeGrid(List<Point> points)
 {
@@ -123,42 +149,6 @@ void WriteTestGrid(Point head, Point tail, HashSet<Point> hashSet)
 
     Console.WriteLine();
 }
-
-void Follow(Point leader, Point follower)
-{
-    int xOffset = leader.X - follower.X;
-    int yOffset = leader.Y - follower.Y;
-
-    if (xOffset > 2
-        || yOffset > 2)
-    {
-        throw new Exception("biigger than 2!");
-    }
-
-    if (xOffset == 0
-        && yOffset == 0)
-    {
-        // Do nothing
-    }
-    else if (Math.Abs(xOffset) == 2
-             && Math.Abs(yOffset) == 2)
-    {
-        follower.Move(new Point(xOffset / 2, yOffset / 2));
-    }
-    else if (Math.Abs(xOffset) == 2)
-    {
-        follower.Move(Math.Abs(yOffset) == 1
-            ? new Point(xOffset / 2, yOffset)
-            : new Point(xOffset / 2, 0));
-    }
-    else if (Math.Abs(yOffset) == 2)
-    {
-        follower.Move(Math.Abs(xOffset) == 1
-            ? new Point(xOffset, yOffset / 2)
-            : new Point(0, yOffset / 2));
-    }
-}
-
 
 public class Point : IEquatable<Point>
 {
