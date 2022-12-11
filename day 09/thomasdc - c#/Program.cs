@@ -41,10 +41,10 @@ int Solve(string[] instructions, int ropeLength)
                 {
                     var nextPosition = knot.Current.Diff(knot.NextKnot.Current) switch
                     {
-                        (2, 1 or -1) or (2, 0) => knot.NextKnot.Current with { Y = knot.NextKnot.Current.Y + 1 },
-                        (-2, 1 or -1) or (-2, 0) => knot.NextKnot.Current with { Y = knot.NextKnot.Current.Y - 1 },
-                        (1 or -1, 2) or (0, 2) => knot.NextKnot.Current with { X = knot.NextKnot.Current.X + 1 },
-                        (1 or -1, -2) or (0, -2) => knot.NextKnot.Current with { X = knot.NextKnot.Current.X - 1 },
+                        (2, -1 or 0 or 1) => knot.NextKnot.Current with { Y = knot.NextKnot.Current.Y + 1 },
+                        (-2, -1 or 0 or 1) => knot.NextKnot.Current with { Y = knot.NextKnot.Current.Y - 1 },
+                        (-1 or 0 or 1, 2) => knot.NextKnot.Current with { X = knot.NextKnot.Current.X + 1 },
+                        (-1 or 0 or 1, -2) => knot.NextKnot.Current with { X = knot.NextKnot.Current.X - 1 },
                         _ => knot.NextKnot!.Previous
                     };
 
