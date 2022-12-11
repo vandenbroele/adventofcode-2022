@@ -63,3 +63,54 @@ for (var y = 0; y < height; y++)
 }
 
 Console.WriteLine(visible.Count);
+
+var scenicScores = new Dictionary<(int y, int x), int>();
+for (var y = 0; y < height; y++)
+{
+    for (var x = 0; x < width; x++)
+    {
+        var distanceTop = 0;
+        for (var yy = y - 1; yy >= 0; yy--)
+        {
+            distanceTop++;
+            if (grid[yy][x] >= grid[y][x])
+            {
+                break;
+            }
+        }
+
+        var distanceBottom = 0;
+        for (var yy = y + 1; yy < height; yy++)
+        {
+            distanceBottom++;
+            if (grid[yy][x] >= grid[y][x])
+            {
+                break;
+            }
+        }
+
+        var distanceLeft = 0;
+        for (var xx = x - 1; xx >= 0; xx--)
+        {
+            distanceLeft++;
+            if (grid[y][xx] >= grid[y][x])
+            {
+                break;
+            }
+        }
+
+        var distanceRight = 0;
+        for (var xx = x + 1; xx < width; xx++)
+        {
+            distanceRight++;
+            if (grid[y][xx] >= grid[y][x])
+            {
+                break;
+            }
+        }
+
+        scenicScores.Add((y, x), distanceTop * distanceBottom * distanceLeft * distanceRight);
+    }
+}
+
+Console.WriteLine(scenicScores.Max(_ => _.Value));
