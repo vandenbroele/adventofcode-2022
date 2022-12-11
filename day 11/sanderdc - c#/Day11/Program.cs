@@ -2,51 +2,51 @@
 
 IEnumerable<string> input = File.ReadLines(paths[0]);
 
-
 List<Monkey> monkeys = input
     .Chunk(7)
     .Select(Monkey.Parse)
     .ToList();
 
-Dictionary<int, int> inspections = new();
+int magicModulo = 1;
 foreach (Monkey monkey in monkeys)
 {
-    inspections.Add(monkey.Id, 0);
     monkey.ThrowTo += ThrowTo;
+    magicModulo *= monkey.Test;
 }
 
-for (int i = 0; i < 20; i++)
+for (int i = 0; i < 10000; i++)
 {
     foreach (Monkey monkey in monkeys)
     {
-        inspections[monkey.Id] += monkey.ItemCount;
-
-        monkey.DoRound();
-        
+        monkey.DoRound(magicModulo);
     }
+}
 
+
+void LogMonkeyInventories()
+{
     foreach (Monkey monkey in monkeys)
     {
-        Console.WriteLine($"{monkey.Id}: {string.Join(", ",monkey.Items)}");
+        Console.WriteLine($"{monkey.Id}: {string.Join(", ", monkey.Items)}");
     }
 
     Console.WriteLine();
 }
 
-foreach (int inspectionsKey in inspections.Keys)
+foreach (Monkey monkey in monkeys)
 {
-    Console.WriteLine($"{inspectionsKey} inspected {inspections[inspectionsKey]}");
+    Console.WriteLine($"{monkey.Id} inspected {monkey.Inspections}");
 }
 
-int result = inspections
-    .Select(pair => pair.Value)
+long monkeyBusiness = monkeys
+    .Select(m => m.Inspections)
     .OrderByDescending(i => i)
     .Take(2)
     .Aggregate((i, i1) => i * i1);
 
-Console.WriteLine(result);
+Console.WriteLine(monkeyBusiness);
 
-void ThrowTo(int target, int item)
+void ThrowTo(int target, long item)
 {
     monkeys.First(m => m.Id == target).Catch(item);
 }
@@ -74,9 +74,9 @@ internal class Monkey
             '*' => argument switch
             {
                 "old" => new MultiplySelf(),
-                _ => new MultiplyNumber(int.Parse(argument))
+                _ => new MultiplyNumber(long.Parse(argument))
             },
-            '+' => new AddNumber(int.Parse(argument)),
+            '+' => new AddNumber(long.Parse(argument)),
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -91,41 +91,45 @@ internal class Monkey
     }
 
     public int Id { get; }
-    public int ItemCount => items.Count;
-    public IEnumerable<int> Items => items;
+    public long Inspections { get; private set; }
+    public int Test { get; }
 
-    private readonly List<int> items;
+    public IEnumerable<long> Items => items;
+
+    private readonly List<long> items;
     private readonly IOperation operation;
-    private readonly int divisibleByTest;
     private readonly int trueTarget;
     private readonly int falseTarget;
 
-    public event Action<int, int> ThrowTo;
+    public event Action<int, long> ThrowTo;
 
     private Monkey(int id, IEnumerable<int> startingItems, IOperation operation, int divisibleBy,
         int trueTarget,
         int falseTarget)
     {
         Id = id;
-        items = new List<int>(startingItems);
+        items = new List<long>(startingItems.Select(i=>(long)i));
         this.operation = operation;
-        divisibleByTest = divisibleBy;
+        Test = divisibleBy;
         this.trueTarget = trueTarget;
         this.falseTarget = falseTarget;
     }
 
-    public void DoRound()
+    public void DoRound(int modulo)
     {
-        foreach (int t in items)
+        foreach (long t in items)
         {
-            int item = t;
-            item = operation.Evaluate(item);
+            Inspections++;
 
-            // Lower worry
-            item /= 3;
+            long item = operation.Evaluate(t);
 
+            // Lower worry (part 1)
+            // item /= 3;
 
-            int target = item % divisibleByTest == 0
+            // Manage worry (part 2)
+            item %= (long)modulo;
+
+            int target = item % Test == 0
                 ? trueTarget
                 : falseTarget;
 
@@ -135,50 +139,50 @@ internal class Monkey
         items.Clear();
     }
 
-    public void Catch(int item)
+    public void Catch(long item)
     {
         items.Add(item);
     }
 }
 
-internal interface IOperation
+public interface IOperation
 {
-    int Evaluate(int input);
+    long Evaluate(long input);
 }
 
-internal class MultiplySelf : IOperation
+public class MultiplySelf : IOperation
 {
-    public int Evaluate(int input)
+    public long Evaluate(long input)
     {
         return input * input;
     }
 }
 
-internal class AddNumber : IOperation
+public class AddNumber : IOperation
 {
-    private readonly int number;
+    private readonly long number;
 
-    public AddNumber(int number)
+    public AddNumber(long number)
     {
         this.number = number;
     }
 
-    public int Evaluate(int input)
+    public long Evaluate(long input)
     {
         return input + number;
     }
 }
 
-internal class MultiplyNumber : IOperation
+public class MultiplyNumber : IOperation
 {
-    private readonly int number;
+    private readonly long number;
 
-    public MultiplyNumber(int number)
+    public MultiplyNumber(long number)
     {
         this.number = number;
     }
 
-    public int Evaluate(int input)
+    public long Evaluate(long input)
     {
         return input * number;
     }
