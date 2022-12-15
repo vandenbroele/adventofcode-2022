@@ -4,7 +4,7 @@
     new("./input.txt", 2000000, 4000000)
 };
 
-(string path, int rowToCheck, int maxSize) = inputs[1];
+(string path, int rowToCheck, int maxSize) = inputs[0];
 
 List<string> inputLines = File.ReadLines(path).ToList();
 
@@ -77,11 +77,24 @@ void CombineRanges(List<Range> list, Range range)
         return;
     }
 
-    // Assume ordered
+    // Assume ordered for code below
 
     for (int i = 0; i < list.Count; i++)
     {
         Range other = list[i];
+
+        // Join adjacent
+        if (range.To + 1 == other.From)
+        {
+            list[i] = new Range(range.From, other.To);
+            return;
+        }
+
+        if (range.From - 1 == other.To)
+        {
+            list[i] = new Range(other.From, range.To);
+            return;
+        }
 
         if (other.To < range.From)
             continue;
