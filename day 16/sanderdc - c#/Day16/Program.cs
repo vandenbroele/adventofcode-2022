@@ -17,6 +17,8 @@ Dictionary<int, Valve> valves = ParseValves(inputLines);
 
 // minute / valveId / bitmask => score
 Dictionary<int, Dictionary<int, Dictionary<long, int>>> memo = new();
+// minute / valveId / valveId2 / bitmask => score
+Dictionary<int, Dictionary<int, Dictionary<int, Dictionary<long, int>>>> memo2 = new();
 Dictionary<int, bool> openValves = new();
 Dictionary<(int, int), int> distances = PrecomputeDistances(valves);
 
@@ -52,6 +54,30 @@ void SetMemo(int remainingMinutes, int valveIndex, long bitMask, int value)
     memo[remainingMinutes][valveIndex][bitMask] = value;
 }
 
+int GetMemo2(int remainingMinutes, int valveIndex, int valveIndex2, long bitMask)
+{
+    if (!memo2.ContainsKey(remainingMinutes)) return -1;
+    if (!memo2[remainingMinutes].ContainsKey(valveIndex)) return -1;
+    if (!memo2[remainingMinutes][valveIndex].ContainsKey(valveIndex2)) return -1;
+    if (!memo2[remainingMinutes][valveIndex][valveIndex2].ContainsKey(bitMask)) return -1;
+
+    return memo[remainingMinutes][valveIndex][bitMask];
+}
+
+void SetMemo2(int remainingMinutes, int valveIndex, int valveIndex2, long bitMask, int value)
+{
+    if (!memo2.ContainsKey(remainingMinutes))
+        memo2[remainingMinutes] = new Dictionary<int, Dictionary<int, Dictionary<long, int>>>();
+
+    if (!memo2[remainingMinutes].ContainsKey(valveIndex))
+        memo2[remainingMinutes][valveIndex] = new Dictionary<int, Dictionary<long, int>>();
+
+    if (!memo2[remainingMinutes][valveIndex].ContainsKey(valveIndex2))
+        memo2[remainingMinutes][valveIndex][valveIndex2] = new Dictionary<long, int>();
+
+    memo2[remainingMinutes][valveIndex][valveIndex2][bitMask] = value;
+}
+
 int Solve(int currentValveId, int remainingMinutes, long bitMask)
 {
     if (remainingMinutes == 0)
@@ -74,32 +100,88 @@ int Solve(int currentValveId, int remainingMinutes, long bitMask)
         maxFlow = currentValveFlowRate;
     }
 
-    foreach (int connection in currentValve.Connections)
+    foreach ((int nextValveId, long bitmask, int flow) in Options())
     {
-        maxFlow = Math.Max(maxFlow, Solve(connection, remainingMinutes - 1, bitMask));
+        maxFlow = Math.Max(maxFlow, flow + Solve(nextValveId, remainingMinutes - 1, bitmask));
+    }
 
+    IEnumerable<(int currentValveId, long bitmask, int flow )> Options()
+    {
         bool shouldOpenValve = currentValve.FlowRate != 0;
         bool hasTimeToOpenValve = 2 <= remainingMinutes;
 
-        if (!hasTimeToOpenValve || !canOpenValve || !shouldOpenValve)
-            continue;
+        if (hasTimeToOpenValve && canOpenValve && shouldOpenValve)
+        {
+            OpenValve(currentValveId);
+            yield return (currentValveId, bitMask + currentValve.BitMask, currentValveFlowRate);
+            CloseValve(currentValveId);
+        }
 
-        OpenValve(currentValveId);
-
-        int connectionSolve = Solve(
-            connection,
-            remainingMinutes - 2,
-            bitMask + currentValve.BitMask);
-
-        maxFlow = Math.Max(maxFlow, currentValveFlowRate + connectionSolve);
-
-        CloseValve(currentValveId);
+        // Return connections
+        foreach (int connection in currentValve.Connections)
+        {
+            yield return (connection, bitMask, 0);
+        }
     }
-
+    
     SetMemo(remainingMinutes, currentValveId, bitMask, maxFlow);
     return maxFlow;
 }
 
+
+int Solve2(int humanValveId, int elephantValveId, int remainingMinutes, long bitMask)
+{
+    if (remainingMinutes == 0)
+        return 0;
+
+    int memoValue = GetMemo2(remainingMinutes, humanValveId, elephantValveId, bitMask);
+    if (memoValue != -1)
+    {
+        return memoValue;
+    }
+
+    int maxFlow = 0;
+
+    Valve currentValve = valves[humanValveId];
+    bool canOpenValve = !IsValveOpen(humanValveId);
+    int currentValveFlowRate = (remainingMinutes - 1) * currentValve.FlowRate;
+
+    if (canOpenValve)
+    {
+        maxFlow = currentValveFlowRate;
+    }
+
+
+    bool shouldOpenValve = currentValve.FlowRate != 0;
+    bool hasTimeToOpenValve = 2 <= remainingMinutes;
+
+    if (hasTimeToOpenValve && canOpenValve && shouldOpenValve)
+    {
+        OpenValve(humanValveId);
+
+        int connectionSolve = Solve2(
+            humanValveId,
+            humanValveId, // TODO
+            remainingMinutes - 1,
+            bitMask + currentValve.BitMask);
+
+        maxFlow = Math.Max(maxFlow, currentValveFlowRate + connectionSolve);
+
+        CloseValve(humanValveId);
+    }
+
+    foreach (int connection in currentValve.Connections)
+    {
+        maxFlow = Math.Max(maxFlow, Solve2(
+            connection,
+            connection, // TODO
+            remainingMinutes - 1,
+            bitMask));
+    }
+
+    SetMemo2(remainingMinutes, humanValveId, elephantValveId, bitMask, maxFlow);
+    return maxFlow;
+}
 
 Dictionary<(int, int), int> PrecomputeDistances(Dictionary<int, Valve> inputValves)
 {
