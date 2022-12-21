@@ -7,7 +7,7 @@ Input[] inputs =
 };
 
 // Input
-Input input = inputs[1];
+Input input = inputs[0];
 List<string> inputLines = File.ReadLines(input.Path).ToList();
 
 // Info
@@ -24,7 +24,8 @@ Dictionary<(int, int), int> distances = PrecomputeDistances(valves);
 
 Valve startValve = valves[nameToId["AA"]];
 
-Console.WriteLine(Solve(startValve.Id, 30, 0));
+Console.WriteLine($"part 1: {Solve(startValve.Id, 30, 0)}");
+Console.WriteLine($"part 2: {Solve2(startValve.Id, startValve.Id, 26, 0)}");
 
 
 void OpenValve(int valveId) => openValves[valveId] = true;
@@ -61,7 +62,7 @@ int GetMemo2(int remainingMinutes, int valveIndex, int valveIndex2, long bitMask
     if (!memo2[remainingMinutes][valveIndex].ContainsKey(valveIndex2)) return -1;
     if (!memo2[remainingMinutes][valveIndex][valveIndex2].ContainsKey(bitMask)) return -1;
 
-    return memo[remainingMinutes][valveIndex][bitMask];
+    return memo2[remainingMinutes][valveIndex][valveIndex2][bitMask];
 }
 
 void SetMemo2(int remainingMinutes, int valveIndex, int valveIndex2, long bitMask, int value)
@@ -95,11 +96,6 @@ int Solve(int currentValveId, int remainingMinutes, long bitMask)
     bool canOpenValve = !IsValveOpen(currentValveId);
     int currentValveFlowRate = (remainingMinutes - 1) * currentValve.FlowRate;
 
-    if (canOpenValve)
-    {
-        maxFlow = currentValveFlowRate;
-    }
-
     foreach ((int nextValveId, long bitmask, int flow) in Options())
     {
         maxFlow = Math.Max(maxFlow, flow + Solve(nextValveId, remainingMinutes - 1, bitmask));
@@ -123,7 +119,7 @@ int Solve(int currentValveId, int remainingMinutes, long bitMask)
             yield return (connection, bitMask, 0);
         }
     }
-    
+
     SetMemo(remainingMinutes, currentValveId, bitMask, maxFlow);
     return maxFlow;
 }
@@ -142,41 +138,68 @@ int Solve2(int humanValveId, int elephantValveId, int remainingMinutes, long bit
 
     int maxFlow = 0;
 
-    Valve currentValve = valves[humanValveId];
-    bool canOpenValve = !IsValveOpen(humanValveId);
-    int currentValveFlowRate = (remainingMinutes - 1) * currentValve.FlowRate;
-
-    if (canOpenValve)
+    foreach ((int nextHumanValveId, long bitmask, int flow) in HumanOptions())
     {
-        maxFlow = currentValveFlowRate;
+        foreach ((int nextElephantValveId, long updatedBitmask, int updatedFlow)
+                 in ElephantOptions(humanValveId, bitmask, flow))
+        {
+            maxFlow = Math.Max(maxFlow, updatedFlow + Solve2(
+                nextHumanValveId,
+                nextElephantValveId,
+                remainingMinutes - 1,
+                updatedBitmask));
+        }
+    }
+
+    IEnumerable<(int nextElephantValveId, long updatedBitmask, int updatedFlow)> ElephantOptions(
+        int humanId,
+        long tempBitmask,
+        int humanFlow)
+    {
+        Valve currentElephantValve = valves[elephantValveId];
+
+        int currentValveFlowRate = (remainingMinutes - 1) * currentElephantValve.FlowRate;
+        bool shouldOpenValve = currentElephantValve.FlowRate != 0;
+        bool hasTimeToOpenValve = 2 <= remainingMinutes;
+        bool canOpenValve = !IsValveOpen(elephantValveId);
+
+        if (hasTimeToOpenValve && canOpenValve && shouldOpenValve)
+        {
+            OpenValve(elephantValveId);
+            yield return (
+                elephantValveId,
+                tempBitmask + currentElephantValve.BitMask,
+                humanFlow + currentValveFlowRate);
+            CloseValve(elephantValveId);
+        }
+        
+        foreach (int connection in currentElephantValve.Connections)
+        {
+            yield return (connection, tempBitmask, humanFlow);
+        }
     }
 
 
-    bool shouldOpenValve = currentValve.FlowRate != 0;
-    bool hasTimeToOpenValve = 2 <= remainingMinutes;
-
-    if (hasTimeToOpenValve && canOpenValve && shouldOpenValve)
+    IEnumerable<(int nextHumanValveId, long bitmask, int flow)> HumanOptions()
     {
-        OpenValve(humanValveId);
+        Valve currentValve = valves[humanValveId];
+        int currentValveFlowRate = (remainingMinutes - 1) * currentValve.FlowRate;
+        bool shouldOpenValve = currentValve.FlowRate != 0;
+        bool hasTimeToOpenValve = 2 <= remainingMinutes;
+        bool canOpenValve = !IsValveOpen(humanValveId);
 
-        int connectionSolve = Solve2(
-            humanValveId,
-            humanValveId, // TODO
-            remainingMinutes - 1,
-            bitMask + currentValve.BitMask);
+        if (hasTimeToOpenValve && canOpenValve && shouldOpenValve)
+        {
+            OpenValve(humanValveId);
+            yield return (humanValveId, bitMask + currentValve.BitMask, currentValveFlowRate);
+            CloseValve(humanValveId);
+        }
 
-        maxFlow = Math.Max(maxFlow, currentValveFlowRate + connectionSolve);
-
-        CloseValve(humanValveId);
-    }
-
-    foreach (int connection in currentValve.Connections)
-    {
-        maxFlow = Math.Max(maxFlow, Solve2(
-            connection,
-            connection, // TODO
-            remainingMinutes - 1,
-            bitMask));
+        // Return connections
+        foreach (int connection in currentValve.Connections)
+        {
+            yield return (connection, bitMask, 0);
+        }
     }
 
     SetMemo2(remainingMinutes, humanValveId, elephantValveId, bitMask, maxFlow);
