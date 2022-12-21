@@ -6,13 +6,99 @@ Input[] inputs =
     new("./input.txt")
 };
 
-Input input = inputs[0];
+// Input
+Input input = inputs[1];
 List<string> inputLines = File.ReadLines(input.Path).ToList();
 
-
-Dictionary<int, string> idLookup = new();
+// Info
+Dictionary<string, int> nameToId = new();
+Dictionary<int, string> idToName = new();
 Dictionary<int, Valve> valves = ParseValves(inputLines);
+
+// minute / valveId / bitmask => score
+Dictionary<int, Dictionary<int, Dictionary<long, int>>> memo = new();
+Dictionary<int, bool> openValves = new();
 Dictionary<(int, int), int> distances = PrecomputeDistances(valves);
+
+Valve startValve = valves[nameToId["AA"]];
+
+Console.WriteLine(Solve(startValve.Id, 30, 0));
+
+
+void OpenValve(int valveId) => openValves[valveId] = true;
+
+void CloseValve(int valveId) => openValves[valveId] = false;
+
+bool IsValveOpen(int valveId) => openValves.ContainsKey(valveId) && openValves[valveId];
+
+
+int GetMemo(int remainingMinutes, int valveIndex, long bitMask)
+{
+    if (!memo.ContainsKey(remainingMinutes)) return -1;
+    if (!memo[remainingMinutes].ContainsKey(valveIndex)) return -1;
+    if (!memo[remainingMinutes][valveIndex].ContainsKey(bitMask)) return -1;
+
+    return memo[remainingMinutes][valveIndex][bitMask];
+}
+
+void SetMemo(int remainingMinutes, int valveIndex, long bitMask, int value)
+{
+    if (!memo.ContainsKey(remainingMinutes))
+        memo[remainingMinutes] = new Dictionary<int, Dictionary<long, int>>();
+
+    if (!memo[remainingMinutes].ContainsKey(valveIndex))
+        memo[remainingMinutes][valveIndex] = new Dictionary<long, int>();
+
+    memo[remainingMinutes][valveIndex][bitMask] = value;
+}
+
+int Solve(int currentValveId, int remainingMinutes, long bitMask)
+{
+    if (remainingMinutes == 0)
+        return 0;
+
+    int memoValue = GetMemo(remainingMinutes, currentValveId, bitMask);
+    if (memoValue != -1)
+    {
+        return memoValue;
+    }
+
+    int maxFlow = 0;
+
+    Valve currentValve = valves[currentValveId];
+    bool canOpenValve = !IsValveOpen(currentValveId);
+    int currentValveFlowRate = (remainingMinutes - 1) * currentValve.FlowRate;
+
+    if (canOpenValve)
+    {
+        maxFlow = currentValveFlowRate;
+    }
+
+    foreach (int connection in currentValve.Connections)
+    {
+        maxFlow = Math.Max(maxFlow, Solve(connection, remainingMinutes - 1, bitMask));
+
+        bool shouldOpenValve = currentValve.FlowRate != 0;
+        bool hasTimeToOpenValve = 2 <= remainingMinutes;
+
+        if (!hasTimeToOpenValve || !canOpenValve || !shouldOpenValve)
+            continue;
+
+        OpenValve(currentValveId);
+
+        int connectionSolve = Solve(
+            connection,
+            remainingMinutes - 2,
+            bitMask + currentValve.BitMask);
+
+        maxFlow = Math.Max(maxFlow, currentValveFlowRate + connectionSolve);
+
+        CloseValve(currentValveId);
+    }
+
+    SetMemo(remainingMinutes, currentValveId, bitMask, maxFlow);
+    return maxFlow;
+}
 
 
 Dictionary<(int, int), int> PrecomputeDistances(Dictionary<int, Valve> inputValves)
@@ -76,10 +162,22 @@ Dictionary<int, Valve> ParseValves(List<string> list)
 {
     Dictionary<int, Valve> result = new();
 
+    int counter = 0;
+    long bitMask = 1;
+
     foreach (string inputLine in list)
     {
         string name = inputLine[6..8];
-        int valveNameHash = name.GetHashCode();
+        int valveId = ++counter;
+
+        nameToId[name] = valveId;
+        idToName[valveId] = name;
+    }
+
+    foreach (string inputLine in list)
+    {
+        string name = inputLine[6..8];
+        int valveId = nameToId[name];
 
         int equalsIndex = inputLine.IndexOf('=');
         int semiColonIndex = inputLine.IndexOf(';');
@@ -90,14 +188,13 @@ Dictionary<int, Valve> ParseValves(List<string> list)
 
         int[] connections = m.Value[(m.Value.IndexOf(' ') + 1)..]
             .Split(", ")
-            .Select(s => s.GetHashCode())
+            .Select(s => nameToId[s])
             .ToArray();
 
-        Valve valve = new(flowRate, connections);
+        Valve valve = new(valveId, bitMask, flowRate, connections);
+        bitMask *= 2;
 
-
-        idLookup.Add(valveNameHash, name);
-        result.Add(valveNameHash, valve);
+        result.Add(valveId, valve);
     }
 
     return result;
@@ -105,4 +202,4 @@ Dictionary<int, Valve> ParseValves(List<string> list)
 
 internal record Input(string Path);
 
-internal record Valve(int FlowRate, int[] Connections);
+internal record Valve(int Id, long BitMask, int FlowRate, int[] Connections);
