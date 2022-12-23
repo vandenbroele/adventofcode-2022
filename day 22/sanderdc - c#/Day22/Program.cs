@@ -34,8 +34,8 @@ catch (Exception e)
 }
 
 Console.WriteLine();
-grid.Render(character);
-grid.RenderToImage(character);
+// grid.Render(character);
+// grid.RenderToImage(character);
 
 int col = character.Position.Col + 1;
 int row = grid.Height - character.Position.Row;
@@ -156,59 +156,59 @@ internal class Grid
         new Edge(
             new Range(new Position(50, 200), new Position(99, 200)),
             new Range(new Position(0, 49), new Position(0, 0)),
-            1),
+            1, Orientation.Up),
         new Edge(
             new Range(new Position(49, 150), new Position(49, 199)),
             new Range(new Position(0, 99), new Position(0, 50)),
-            2),
+            2, Orientation.Left),
         new Edge(
             new Range(0, 100, 49, 100),
             new Range(50, 149, 50, 100),
-            1),
+            1, Orientation.Up),
         new Edge(
             new Range(49, 149, 49, 100),
             new Range(0, 99, 49, 99),
-            3),
+            3, Orientation.Left),
         new Edge(
             new Range(-1, 99, -1, 50),
             new Range(50, 150, 50, 199),
-            2),
-        new Edge(
+            2, Orientation.Left),
+        new Edge(//6
             new Range(100, 149, 149, 149),
             new Range(99, 149, 99, 100),
-            1),
+            1, Orientation.Down),
         new Edge(
             new Range(100, 149, 100, 100),
             new Range(100, 150, 149, 150),
-            3),
-        new Edge(
+            3, Orientation.Right),
+        new Edge(// 8
             new Range(150, 150, 150, 199),
             new Range(99, 99, 99, 50),
-            2),
+            2, Orientation.Right),
         new Edge(
             new Range(100, 99, 100, 50),
             new Range(149, 150, 149, 199),
-            2),
-        new Edge(
+            2, Orientation.Right),
+        new Edge(//10
             new Range(-1, 49, -1, 0),
             new Range(50, 199, 99, 199),
-            3),
+            3, Orientation.Left),
         new Edge(
             new Range(100, 200, 199, 200),
             new Range(49, 0, 0, 0),
-            0),
+            0,Orientation.Up),
         new Edge(
             new Range(50, 49, 99, 49),
             new Range(49, 49, 49, 0),
-            1),
-        new Edge(
+            1, Orientation.Down),
+        new Edge(//13
             new Range(50, 49, 50, 0),
             new Range(50, 50, 99, 50),
-            3),
+            3, Orientation.Right),
         new Edge(
             new Range(0, -1, 49, -1),
             new Range(100, 199, 149, 199),
-            0)
+            0, Orientation.Down)
     };
 
     public Grid(int width, int height, List<(Position, Tile)> positions)
@@ -300,7 +300,7 @@ internal class Grid
     {
         try
         {
-            Edge edge = edges.First(e => e.From.Contains(position));
+            Edge edge = edges.First(e => e.Orientation == orientation && e.From.Contains(position));
 
             int offset = edge.From.GetOffset(position);
 
@@ -433,7 +433,7 @@ public static class LogGrid
     public static bool Should;
 }
 
-internal record Edge(Range From, Range To, int ClockWiseRotations);
+internal record Edge(Range From, Range To, int ClockWiseRotations, Orientation Orientation);
 
 internal class Range
 {
