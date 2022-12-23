@@ -12,7 +12,7 @@ Grid grid = new();
 
 
 Shape? currentShape = null;
-long dropCount = 1000000000000;
+const long dropCount = 1000000000000;
 const int dropCountPart1 = 2022;
 
 for (long fallenRocks = 0; fallenRocks < dropCount;)
@@ -83,10 +83,12 @@ for (long fallenRocks = 0; fallenRocks < dropCount;)
 
         if (dropCountPart1 == fallenRocks)
         {
-            Console.WriteLine($"part1: {grid.CurrentMaxY}");
+            Console.WriteLine($"part1: {grid.CurrentMaxY + grid.Bottom}");
         }
     }
 }
+
+Console.WriteLine($"part2: {grid.CurrentMaxY + grid.Bottom}");
 
 internal class Grid
 {
@@ -101,7 +103,8 @@ internal class Grid
         new Position(6, -1),
     };
 
-    public int CurrentMaxY;
+    public int CurrentMaxY { get; private set; }
+    public int Bottom { get; private set; }
 
     private int[] lowestPositions = { -1, -1, -1, -1, -1, -1, -1 };
     private int currentBottom = -1;
@@ -111,17 +114,48 @@ internal class Grid
         Position[] collection = shape.GetPositions().ToArray();
         solidPositions.AddRange(collection);
         CurrentMaxY = Math.Max(CurrentMaxY, collection.Max(p => p.Y) + 1);
+
+        for (int i = 0; i < 7; i++)
+        {
+            int lowestPosition = Math.Max(lowestPositions[i], solidPositions.Where(p => p.X == i).Max(p => p.Y));
+            lowestPositions[i] = lowestPosition;
+        }
+
+        // Console.WriteLine($"floor: {string.Join(",", lowestPositions)}");
+
+        int floor = lowestPositions.Min();
+        // Console.WriteLine(floor);
+        if (floor > 0)
+        {
+            ClearBottom(floor-1);
+        }
+
     }
 
-    private void ClearBottom()
+    private void ClearBottom(int floor)
     {
+        CurrentMaxY -= floor;
+        Bottom += floor;
+        
+        for (int i = 0; i < lowestPositions.Length; i++)
+        {
+            lowestPositions[i] -= floor;
+        }
+
+        solidPositions.RemoveAll(p => p.Y < floor);
+
+        for (int i = 0; i < solidPositions.Count; i++)
+        {
+            solidPositions[i] = solidPositions[i] with { Y = solidPositions[i].Y - floor };
+        }
+
         // Call this after each drop
-        
+
         // Find lowest items that span entire width
-        
+
         // move all items down by the gap and toss all items below the gap
         // This should keep things inside int range
-        
+
         // we might also need to offset the 'current shape' outside of this scope
         // Maybe return an offset here. We call clear after each drop
     }

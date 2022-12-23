@@ -1,10 +1,11 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using System.Drawing;
 
 Input[] inputs =
 {
-    new("./testInput.txt", 50),
-    new("./input.txt", 4)
+    new("./testInput.txt", 4),
+    new("./input.txt", 50)
 };
 
 LogGrid.Should = false;
@@ -13,12 +14,63 @@ Input input = inputs[1];
 
 List<string> allLines = File.ReadLines(input.Path).ToList();
 
-Grid grid = Parse(allLines.SkipLast(2).ToList());
+Grid grid = Parse(allLines.SkipLast(2).ToList(), Data.BigEdges);
 grid.RegionSize = input.RegionSize;
 string commandString = allLines.Last();
 Character character = new(grid.GetStartPos(), Orientation.Right);
 
 
+//TESTS
+// {
+//     for (int i = 0; i < Data.BigEdges.Count; i++)
+//     {
+//         Edge edge = Data.BigEdges[i];
+//
+//         int xOffset = edge.Orientation switch
+//         {
+//             Orientation.Left => 1,
+//             Orientation.Right => -1,
+//             _ => 0
+//         };
+//
+//         int yOffset = edge.Orientation switch
+//         {
+//             Orientation.Up => -1,
+//             Orientation.Down => 1,
+//             _ => 0
+//         };
+//
+//         Position startPos = new(edge.From.From.Col + xOffset, edge.From.From.Row + yOffset);
+//         character.Position = startPos;
+//         character.Orientation = edge.Orientation;
+//
+//         grid.RenderToImage(character, $"{i + 1}F.1");
+//         Execute("1");
+//         grid.RenderToImage(character, $"{i + 1}F.2");
+//         Execute("RR1");
+//         grid.RenderToImage(character, $"{i + 1}F.3");
+//         if (startPos != character.Position) ;
+//         {
+//             Console.WriteLine($"edge {i + 1} From did not return correctly (expected {startPos} but was {character.Position})");
+//         }
+//
+//         startPos = new Position(edge.From.To.Col + xOffset, edge.From.To.Row + yOffset);
+//         character.Position = startPos;
+//         character.Orientation = edge.Orientation;
+//
+//         grid.RenderToImage(character, $"{i + 1}T.1");
+//         Execute("1");
+//         grid.RenderToImage(character, $"{i + 1}T.2");
+//         Execute("RR1");
+//         grid.RenderToImage(character, $"{i + 1}T.3");
+//         if (startPos != character.Position) ;
+//         {
+//             Console.WriteLine($"edge {i + 1} To did not return correctly (expected {startPos} but was {character.Position})");
+//         }
+//     }
+// }
+//
+// return;
 // grid.Render(character);
 
 // Execute("RR1");
@@ -72,7 +124,7 @@ void Execute(string commands)
                 Console.WriteLine($"command: {cmd}");
                 grid.Render(character);
             }
-            
+
             // grid.RenderToImage(character);
 
             if (numberString.Length > 0)
@@ -108,7 +160,7 @@ void Execute(string commands)
     }
 }
 
-Grid Parse(IList<string> gridLines)
+Grid Parse(IList<string> gridLines, List<Edge> edges)
 {
     using IEnumerator<string> lines = gridLines.GetEnumerator();
     int width = gridLines.Max(l => l.Length);
@@ -129,7 +181,7 @@ Grid Parse(IList<string> gridLines)
     }
 
 
-    return new Grid(width, height, positions);
+    return new Grid(width, height, positions, edges);
 }
 
 int ScoreOrientation(Orientation o) => o switch
@@ -149,70 +201,12 @@ internal class Grid
     public int Height => tiles.GetLength(1);
     public int RegionSize { get; set; }
 
-    
-    // TODO: simplify creating the edges or find a way to validate them
-    private readonly List<Edge> edges = new()
-    {
-        new Edge(
-            new Range(new Position(50, 200), new Position(99, 200)),
-            new Range(new Position(0, 49), new Position(0, 0)),
-            1, Orientation.Up),
-        new Edge(
-            new Range(new Position(49, 150), new Position(49, 199)),
-            new Range(new Position(0, 99), new Position(0, 50)),
-            2, Orientation.Left),
-        new Edge(
-            new Range(0, 100, 49, 100),
-            new Range(50, 149, 50, 100),
-            1, Orientation.Up),
-        new Edge(
-            new Range(49, 149, 49, 100),
-            new Range(0, 99, 49, 99),
-            3, Orientation.Left),
-        new Edge(
-            new Range(-1, 99, -1, 50),
-            new Range(50, 150, 50, 199),
-            2, Orientation.Left),
-        new Edge(//6
-            new Range(100, 149, 149, 149),
-            new Range(99, 149, 99, 100),
-            1, Orientation.Down),
-        new Edge(
-            new Range(100, 149, 100, 100),
-            new Range(100, 150, 149, 150),
-            3, Orientation.Right),
-        new Edge(// 8
-            new Range(150, 150, 150, 199),
-            new Range(99, 99, 99, 50),
-            2, Orientation.Right),
-        new Edge(
-            new Range(100, 99, 100, 50),
-            new Range(149, 150, 149, 199),
-            2, Orientation.Right),
-        new Edge(//10
-            new Range(-1, 49, -1, 0),
-            new Range(50, 199, 99, 199),
-            3, Orientation.Left),
-        new Edge(
-            new Range(100, 200, 199, 200),
-            new Range(49, 0, 0, 0),
-            0,Orientation.Up),
-        new Edge(
-            new Range(50, 49, 99, 49),
-            new Range(49, 49, 49, 0),
-            1, Orientation.Down),
-        new Edge(//13
-            new Range(50, 49, 50, 0),
-            new Range(50, 50, 99, 50),
-            3, Orientation.Right),
-        new Edge(
-            new Range(0, -1, 49, -1),
-            new Range(100, 199, 149, 199),
-            0, Orientation.Down)
-    };
 
-    public Grid(int width, int height, List<(Position, Tile)> positions)
+    private readonly List<Edge> edges;
+
+    public Grid(int width, int height, List<(Position, Tile)> positions, List<Edge> edges)
     {
+        this.edges = edges;
         tiles = new Tile[width, height];
 
         for (int col = 0; col < tiles.GetLength(0); col++)
@@ -256,9 +250,9 @@ internal class Grid
         return result;
     }
 
-    private (Position, Orientation) NextTileInDirection(Position start, Orientation orientation)
+    private (Position, Orientation) NextTileInDirection(Position start, Orientation startOrientation)
     {
-        Position next = orientation switch
+        Position next = startOrientation switch
         {
             Orientation.Right => start with { Col = start.Col + 1 },
             Orientation.Left => start with { Col = start.Col - 1 },
@@ -266,34 +260,42 @@ internal class Grid
             Orientation.Down => start with { Row = start.Row - 1 },
             _ => start
         };
+        Orientation nextOrientation = startOrientation;
 
+        bool hasWarped = false;
         if (next.Row >= Height)
         {
-            (next, orientation) = TransformEdge(next, orientation);
+            hasWarped = true;
+            (next, nextOrientation) = TransformEdge(next, startOrientation);
         }
-
-        if (next.Row < 0)
+        else if (next.Row < 0)
         {
-            (next, orientation) = TransformEdge(next, orientation);
+            hasWarped = true;
+            (next, nextOrientation) = TransformEdge(next, startOrientation);
         }
-
-        if (next.Col >= Width)
+        else if (next.Col >= Width)
         {
-            (next, orientation) = TransformEdge(next, orientation);
+            hasWarped = true;
+            (next, nextOrientation) = TransformEdge(next, startOrientation);
         }
-
-        if (next.Col < 0)
+        else if (next.Col < 0)
         {
-            (next, orientation) = TransformEdge(next, orientation);
+            hasWarped = true;
+            (next, nextOrientation) = TransformEdge(next, startOrientation);
         }
-
-        // Handle open
-        if (tiles[next.Col, next.Row] == Tile.Empty)
+        else if (tiles[next.Col, next.Row] == Tile.Empty)
         {
-            (next, orientation) = TransformEdge(next, orientation);
+            hasWarped = true;
+            (next, nextOrientation) = TransformEdge(next, startOrientation);
         }
 
-        return (next, orientation);
+        if (hasWarped)
+        {
+            RenderToImage(new Character(start, startOrientation));
+            RenderToImage(new Character(next, nextOrientation));
+        }
+
+        return (next, nextOrientation);
     }
 
     private (Position, Orientation) TransformEdge(Position position, Orientation orientation)
@@ -338,7 +340,7 @@ internal class Grid
 
     public void Render(Character character) => Console.WriteLine(GetGridString(character));
 
-    public void RenderToImage(Character character)
+    public void RenderToImage(Character character, string? name = null)
     {
         string text = GetGridString(character);
         Font font = new Font("Cascadia Mono", 15f);
@@ -385,8 +387,16 @@ internal class Grid
         drawing.Dispose();
 
 
-        Directory.CreateDirectory("./renders");
-        img.Save($"./renders/img{++index:0000}.png");
+        if (name == null)
+        {
+            Directory.CreateDirectory("./renders");
+            img.Save($"./renders/img{++index:0000}.png");
+        }
+        else
+        {
+            Directory.CreateDirectory("./customRenders");
+            img.Save($"./customRenders/{name}.png");
+        }
     }
 
     private static int index = 0;
@@ -426,6 +436,70 @@ internal class Grid
         string gridString = sb.ToString();
         return gridString;
     }
+}
+
+internal static class Data
+{
+    // TODO: simplify creating the edges or find a way to validate them
+    public static List<Edge> BigEdges = new()
+    {
+        new Edge(
+            new Range(new Position(50, 200), new Position(99, 200)),
+            new Range(new Position(0, 49), new Position(0, 0)),
+            1, Orientation.Up),
+        new Edge(
+            new Range(new Position(49, 150), new Position(49, 199)),
+            new Range(new Position(0, 99), new Position(0, 50)),
+            2, Orientation.Left),
+        new Edge(
+            new Range(0, 100, 49, 100),
+            new Range(50, 149, 50, 100),
+            1, Orientation.Up),
+        new Edge(
+            new Range(49, 149, 49, 100),
+            new Range(0, 99, 49, 99),
+            3, Orientation.Left),
+        new Edge(
+            new Range(-1, 99, -1, 50),
+            new Range(50, 150, 50, 199),
+            2, Orientation.Left),
+        new Edge( //6
+            new Range(100, 149, 149, 149),
+            new Range(99, 149, 99, 100),
+            1, Orientation.Down),
+        new Edge(
+            new Range(100, 149, 100, 100),
+            new Range(100, 150, 149, 150),
+            3, Orientation.Right),
+        new Edge( // 8
+            new Range(150, 150, 150, 199),
+            new Range(99, 99, 99, 50),
+            2, Orientation.Right),
+        new Edge(
+            new Range(100, 99, 100, 50),
+            new Range(149, 150, 149, 199),
+            2, Orientation.Right),
+        new Edge( //10
+            new Range(-1, 49, -1, 0),
+            new Range(50, 199, 99, 199),
+            3, Orientation.Left),
+        new Edge( // 11
+            new Range(100, 200, 149, 200),
+            new Range(0, 0, 49, 0),
+            0, Orientation.Up),
+        new Edge(
+            new Range(50, 49, 99, 49),
+            new Range(49, 49, 49, 0),
+            1, Orientation.Down),
+        new Edge( //13
+            new Range(50, 49, 50, 0),
+            new Range(50, 50, 99, 50),
+            3, Orientation.Right),
+        new Edge(
+            new Range(0, -1, 49, -1),
+            new Range(100, 199, 149, 199),
+            0, Orientation.Down)
+    };
 }
 
 public static class LogGrid
