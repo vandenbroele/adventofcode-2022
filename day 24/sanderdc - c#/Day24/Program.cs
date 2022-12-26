@@ -8,16 +8,16 @@
 IList<string> inputLines = File.ReadLines(inputs[2].Path).ToArray();
 Valley valley = new(inputLines);
 
-// Get start pos
+// Get start and end pos
 
 for (int i = 0; i < 3; i++)
 {
-    
     valley.Update();
-    // Add valid target positions to options until path is reached
-    
+    // Add valid target positions
+
+    // if end is reached -> count minutes
 }
-// valley.Render();
+
 
 internal class Valley
 {
