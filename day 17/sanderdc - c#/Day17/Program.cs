@@ -1,4 +1,6 @@
-﻿Input[] inputs =
+﻿using System.Collections;
+
+Input[] inputs =
 {
     new("./testInput.txt"),
     new("./input.txt")
@@ -6,17 +8,71 @@
 
 Input input = inputs[1];
 Jet jets = new(File.ReadAllText(input.Path));
-IEnumerator<Direction> jetGenerator = jets.Directions();
-IEnumerator<Shape> shapeGenerator = Shape.Spawner();
+ShapeGenerator shapeGenerator = new();
 Grid grid = new();
+
+
+HashSet<(int, int, int)> repetitions = new();
+int index = 0;
+bool foundRep = false;
+int repIndex = -1;
+
+// Code below with logging gave me data for some magic iteration numbers
+grid.BlockPlaced += () =>
+{
+    ++index;
+
+    if (foundRep)
+    {
+        if (index % repIndex == 0)
+        {
+            // Console.WriteLine($"({index}) {shapeGenerator.Index} {jets.Index} {grid.CurrentMaxY}");
+        }
+
+        return;
+    }
+
+    if (!repetitions.Add((shapeGenerator.Index, jets.Index, grid.CurrentMaxY)))
+    {
+        if(index < 5000)
+            return;
+
+        // Console.WriteLine($"stuff at index {index}");
+        foundRep = true;
+        repIndex = index;
+    }
+};
 
 
 Shape? currentShape = null;
 const long dropCount = 1000000000000;
 const int dropCountPart1 = 2022;
 
+long bottomAt1 = 0;
+
 for (long fallenRocks = 0; fallenRocks < dropCount;)
 {
+
+    // Did some notepad calculations to get the following magic numbers
+    if (fallenRocks == 10000)
+    {
+        bottomAt1 = grid.Bottom;
+    }
+    if (fallenRocks == 225000)
+    {
+        //bottomOffset should be delta height between iterations
+        var bottomOffset = grid.Bottom-bottomAt1;
+        while (fallenRocks< dropCount)
+        {
+            grid.Bottom += bottomOffset;
+            fallenRocks += 215000;
+        }
+
+        grid.Bottom -= bottomOffset;
+        fallenRocks -= 215000;
+    }
+    
+    
     if (currentShape == null)
     {
         // Spawn
@@ -31,11 +87,10 @@ for (long fallenRocks = 0; fallenRocks < dropCount;)
         //     grid.RenderWithShape(currentShape);
         // }
     }
-
-
+    
     // Jet
-    jetGenerator.MoveNext();
-    Direction dir = jetGenerator.Current;
+    jets.MoveNext();
+    Direction dir = jets.Current;
 
     switch (dir)
     {
@@ -103,11 +158,14 @@ internal class Grid
         new Position(6, -1),
     };
 
+    public event Action BlockPlaced;
+
     public int CurrentMaxY { get; private set; }
-    public int Bottom { get; private set; }
+    public long Bottom { get; set; }
 
     private int[] lowestPositions = { -1, -1, -1, -1, -1, -1, -1 };
     private int currentBottom = -1;
+
 
     public void PlaceShape(Shape shape)
     {
@@ -127,16 +185,17 @@ internal class Grid
         // Console.WriteLine(floor);
         if (floor > 0)
         {
-            ClearBottom(floor-1);
+            ClearBottom(floor - 1);
         }
 
+        BlockPlaced?.Invoke();
     }
 
     private void ClearBottom(int floor)
     {
         CurrentMaxY -= floor;
         Bottom += floor;
-        
+
         for (int i = 0; i < lowestPositions.Length; i++)
         {
             lowestPositions[i] -= floor;
@@ -197,6 +256,7 @@ internal class Grid
     }
 
     public void Render() => RenderWithShape(null);
+
 
     public void RenderWithShape(Shape? currentShape)
     {
@@ -303,7 +363,7 @@ internal class Shape
     private readonly Position[] blocks;
     private readonly int maxX;
 
-    private Shape(Position[] blocks)
+    public Shape(Position[] blocks)
     {
         this.blocks = blocks;
         maxX = blocks.Max(p => p.X);
@@ -313,45 +373,132 @@ internal class Shape
         .Select(position => new Position(Position.X + position.X, Position.Y + position.Y));
 }
 
-internal class Jet
+internal enum Direction
+{
+    Left,
+    Right,
+    Unknown
+}
+
+internal class ShapeGenerator : IEnumerator<Shape>
+{
+    public int Index { get; private set; } = -1;
+
+    private readonly List<Shape> shapes = new()
+    {
+        // Horizontal line
+        new Shape(new[]
+        {
+            new Position(0, 0),
+            new Position(1, 0),
+            new Position(2, 0),
+            new Position(3, 0)
+        }),
+
+        // Cross
+        new Shape(new[]
+        {
+            new Position(1, 0),
+            new Position(0, 1),
+            new Position(1, 1),
+            new Position(2, 1),
+            new Position(1, 2)
+        }),
+
+
+        // Inverse L
+        new Shape(new[]
+        {
+            new Position(0, 0),
+            new Position(1, 0),
+            new Position(2, 0),
+            new Position(2, 1),
+            new Position(2, 2)
+        }),
+
+        // Vertical line
+        new Shape(new[]
+        {
+            new Position(0, 0),
+            new Position(0, 1),
+            new Position(0, 2),
+            new Position(0, 3)
+        }),
+
+        // Block
+        new Shape(new[]
+        {
+            new Position(0, 0),
+            new Position(1, 0),
+            new Position(0, 1),
+            new Position(1, 1)
+        }),
+    };
+
+    public bool MoveNext()
+    {
+        Index = (Index + 1) % shapes.Count;
+        Current = shapes[Index];
+
+        return true;
+    }
+
+    public void Reset()
+    {
+        Index = -1;
+    }
+
+    public Shape Current { get; private set; }
+
+    object IEnumerator.Current => Current;
+
+    public void Dispose()
+    {
+    }
+}
+
+internal class Jet : IEnumerator<Direction>
 {
     private readonly string input;
+
+    public int Index { get; private set; } = -1;
 
     public Jet(string input)
     {
         this.input = input;
     }
 
-    public IEnumerator<Direction> Directions()
+    public bool MoveNext()
     {
-        int index = -1;
-
-        while (true)
+        Index = (Index + 1) % input.Length;
+        Current = input[Index] switch
         {
-            index = (index + 1) % input.Length;
+            '<' => Direction.Left,
+            '>' => Direction.Right,
+            _ => Direction.Unknown
+        };
 
-            Direction result = input[index] switch
-            {
-                '<' => Direction.Left,
-                '>' => Direction.Right,
-                _ => Direction.Unknown
-            };
-
-            if (result == Direction.Unknown)
-            {
-                continue;
-            }
-
-            yield return result;
+        if (Current == Direction.Unknown)
+        {
+            MoveNext();
         }
-    }
-}
 
-internal enum Direction
-{
-    Left,
-    Right,
-    Unknown
+
+        return true;
+    }
+
+    public void Reset()
+    {
+        Index = -1;
+    }
+
+    public Direction Current { get; private set; }
+
+    object IEnumerator.Current => Current;
+
+    public void Dispose()
+    {
+    }
 }
 
 internal record Input(string Path);
