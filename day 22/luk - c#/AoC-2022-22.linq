@@ -7,15 +7,15 @@
 
 void Main()
 {
-	Run(sampleInput).Dump("sample (6032 / 5031)");
-	Run(puzzleInput).Dump("puzzle (27492 / ?)"); // 42301 too high
+	//Run(sampleInput).Dump("sample (6032 / 5031)");
+	Run(puzzleInput).Dump("puzzle (27492 / 78291)");
 }
 
 private static Regex RotationRegex = new Regex(@"((?<nr>\d+)|(?<rot>[LR]))");
 
 public object Run(string input) => new
 {
-	Part1 = RunPart1(input),
+	//Part1 = RunPart1(input),
 	Part2 = RunPart2(input),
 };
 
@@ -143,7 +143,7 @@ public int RunPart2(string input)
 					Facing.Down => CubeMoveY(board, pos, 1),
 					_ => throw new Exception()
 				};
-				if (newPos == null) break;
+				if (board[newPos.Y][newPos.X] == '#') break;
 				pos = newPos;
 				route.Add((pos, pos.Facing));
 			}
@@ -158,62 +158,92 @@ public int RunPart2(string input)
 	return 1000 * (pos.Y + 1) + 4 * (pos.X + 1) + (int)pos.Facing;
 }
 
-//         0-g-90-c-9      
-//        0..........0     X   a: y >=0 && y < 50 && x > L  => 
-//		  |..........|
-//		  b..........a
-//		  |..........|
-//  	  9..........9 
-//        0.....0-e-9
-//		  |.....|
-//	  	  d.....E
-//		  |.....|
-//    0-D-9.....9
-//   9..........9
-//   |..........|
-//   B..........A
-//   |..........|
-//   0..........0
-//   0.....0-f-9
-//   |.....|
-//   G.....F
-//   |.....|
-//   9.....9
-//    0-C-9
+//                 1   1
+//           45   90   4
+//       0---90---90---9
+//
+//            0-g-90-c-9      
+//   0       0..........0
+// 	 |       |..........|
+// 	 |       b..........a
+//   |       |..........|
+//  49       9..........9 
+//  50       0.....0-e-9
+// 	 |       |.....|
+//   |       d.....E
+//   |       |.....|
+//  99   0-D-9.....9
+// 100  9..........9
+//   |  |..........|
+//   |  B..........A
+//   |  |..........|
+// 149  0..........0
+// 150  0.....0-f-9
+//   |  |.....|
+//   |  G.....F
+//   |  |.....|
+// 199  9.....9
+//       0-C-9
 
 public Point CubeMoveX(string[] board, Point pos, int dirX)
 {
 	if (Math.Abs(dirX) != 1) throw new Exception();
 
-	var line = board[pos.Y];
-	var newX = pos.X;
-
-	for (int i = 0; i < line.Length; i++)
-	{
-		newX = (newX + dirX) % line.Length;
-		if (newX < 0) newX += line.Length;
-
-		if (line[newX] == '#') return null;
-		if (line[newX] == '.') return new Point(newX, pos.Y, pos.Facing);
-	}
-	throw new Exception();
+	var line = board[pos.Y];                                                    //                 1   1
+	var newX = pos.X + dirX;                                                    //           45   90   4
+																				//    x  0---90---90---9
+	if (pos.Y >= 0 && pos.Y < 50 && newX >= 150) // a -> A 				        //   y
+		return new Point(99, 149 - pos.Y, Facing.Left);                         //            0-g-90-c-9    
+																				//   0       0..........0
+	if (pos.Y >= 100 && pos.Y < 150 && newX >= 100) // A -> a			        // 	 |       |..........|           ---g---
+		return new Point(149, 149 - pos.Y, Facing.Left);                        // 	 |       b..U....R..a         /|      /|
+																				//   |       |..........|        b |     / c
+	if (pos.Y >= 0 && pos.Y < 50 && newX < 50) // b -> B						//  49       9..........9       /  |    /  |
+		return new Point(0, 149 - pos.Y, Facing.Right);							//  50       0.....0-e-9        -------f--- 
+																				// 	 |       |.....|           |  /    |  /
+	if (pos.Y >= 100 && pos.Y < 150 && newX < 0) // B -> b						//   |       d..F..E           d /     e a
+		return new Point(50, 149 - pos.Y, Facing.Right);		        		//   |       |.....|           |/      |/
+																				//  99   0-D-9.....9            ------- 
+	if (pos.Y >= 50 && pos.Y < 100 && newX < 50) // d -> D						// 100  9..........9
+		return new Point(pos.Y - 50, 100, Facing.Down);							//   |  |..........|
+																				//   |  B..L....D..A
+	if (pos.Y >= 50 && pos.Y < 100 && newX >= 100) // E -> e					//   |  |..........|
+		return new Point(pos.Y + 50, 49, Facing.Up);							// 149  0..........0
+																				// 150  0.....0-f-9
+	if (pos.Y >= 150 && pos.Y < 200 && newX >= 50) // F -> f					//   |  |.....|
+		return new Point(pos.Y - 100, 149, Facing.Up);							//   |  G..B..F
+																				//   |  |.....|
+	if (pos.Y >= 150 && pos.Y < 200 && newX < 0) // G -> g						// 199  9.....9
+		return new Point(pos.Y - 100, 0, Facing.Down);							//       0-C-9
+	
+	else return new Point(newX, pos.Y, pos.Facing);
 }
-public Point CubeMoveY(string[] board, Point pos, int dirY)
-{
-	if (Math.Abs(dirY) != 1) throw new Exception();
-
-	var newY = pos.Y;
-	for (int i = 0; i < board.Length; i++)
-	{
-		newY = (newY + dirY) % board.Length;
-		if (newY < 0) newY += board.Length;
-
-		if (board[newY].Length <= pos.X) continue;
-		if (board[newY][pos.X] == '#') return null;
-		if (board[newY][pos.X] == '.') return new Point(pos.X, newY, pos.Facing);
-	}
-	throw new Exception();
-}
+public Point CubeMoveY(string[] board, Point pos, int dirY)                     //                 1   1
+{                                                                               //           45   90   4
+	if (Math.Abs(dirY) != 1) throw new Exception();                             //    x  0---90---90---9
+																				//   y
+	var newY = pos.Y + dirY;                                                    //            0-g-90-c-9    
+																				//   0       0..........0
+	if (newY < 0 && pos.X >= 100 && pos.X < 150) // c -> C						// 	 |       |..........|
+		return new Point(pos.X - 100, 199, Facing.Up);                          // 	 |       b..........a
+																				//   |       |..........|
+	if (newY >= 200 && pos.X >= 0 && pos.X < 50) // C -> c						//  49       9..........9 
+		return new Point(pos.X + 100, 0, Facing.Down);							//  50       0.....0-e-9
+																				// 	 |       |.....|
+	if (newY < 100  && pos.X >= 0 && pos.X < 50) // D -> d						//   |       d.....E
+		return new Point(50, pos.X + 50, Facing.Right);							//   |       |.....|
+																				//  99   0-D-9.....9
+	if (newY >= 50 && pos.X >= 100 && pos.X < 150) // e -> E					// 100  9..........9
+		return new Point(99, pos.X - 50, Facing.Left);							//   |  |..........|
+																				//   |  B..........A
+	if (newY >= 150 && pos.X >= 50 && pos.X < 100) // f -> F					//   |  |..........|
+		return new Point(49, pos.X + 100, Facing.Left);							// 149  0..........0
+																				// 150  0.....0-f-9
+	if (newY < 0 && pos.X >= 50 && pos.X < 100) // g -> G						//   |  |.....|
+		return new Point(0, pos.X + 100, Facing.Right);							//   |  G.....F
+																				//   |  |.....|
+	else return new Point(pos.X, newY, pos.Facing);								// 199  9.....9
+}																				//       0-C-9
 
 public void Print(string[] board, List<(Point, Facing)> route)
 {

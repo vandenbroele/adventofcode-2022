@@ -8,11 +8,11 @@
 
 void Main()
 {
-	GetHeight(sampleInput, 2022).Dump("sample height@2022 (3068)");
-	GetHeight(puzzleInput, 2022).Dump("puzzle height@2022 (3232)");
+	GetHeight(sampleInput, 2022).Dump("3068 - sample height@2022");
+	GetHeight(puzzleInput, 2022).Dump("3232 - puzzle height@2022");
 
-	GetHeight(sampleInput, 1000000000000).Dump("sample height@1000000000000 (1514285714288)");
-	GetHeight(puzzleInput, 1000000000000).Dump("puzzle height@1000000000000 (?)");
+	GetHeight(sampleInput, 1000000000000).Dump("1514285714288 - sample height@1000000000000");
+	GetHeight(puzzleInput, 1000000000000).Dump("1585632183915 - puzzle height@1000000000000");
 }
 
 public class ProgressTracker
@@ -30,8 +30,8 @@ public long GetHeight(string input, long nrOfBlocks)
 	var removedLines = 0L;
 	var moveIndex = 0;
 
-	var patternEndIndex = 0;
-	var patternStart = new List<byte>();
+	var patternIdx = new List<(long, int)>();
+	var patternHeights = new List<long>();
 
 	for (long i = 0; i < nrOfBlocks; i++)
 	{
@@ -47,10 +47,57 @@ public long GetHeight(string input, long nrOfBlocks)
 			moveIndex %= input.Length;
 			Move(lines, rock, start, input[moveIndex++]);
 
-			if (!Move(lines, rock, start - 1, 'V')) break;
+			if (!Move(lines, rock, start - 1, 'v')) break;
 			start--;
 			//Print(lines, rock, start);
 		}
+
+		var pattern = (i % 5, moveIndex % input.Length);
+		if (patternIdx.Count(p => p.Item1 == pattern.Item1 && p.Item2 == pattern.Item2) > 5)
+		{
+			var firstIdx = patternIdx.IndexOf(pattern);
+			var secondIdx = patternIdx.IndexOf(pattern, firstIdx + 1) - 1;
+			var thirdIdx = patternIdx.IndexOf(pattern, secondIdx + 2) - 1;
+						
+			// find the first stable pattern height
+			while ((patternHeights[secondIdx] - patternHeights[firstIdx]) != (patternHeights[thirdIdx] - patternHeights[secondIdx]))
+			{
+				firstIdx = secondIdx;
+				secondIdx = thirdIdx;
+				thirdIdx = patternIdx.IndexOf(pattern, secondIdx + 2) - 1;
+			}
+
+			var nrOfBlocksInPattern = secondIdx - firstIdx;
+			var heightBeforePattern = patternHeights[firstIdx - 1];
+			var patternHeight = patternHeights[secondIdx] - patternHeights[firstIdx];
+
+			var nrOfRepetitions = (nrOfBlocks - firstIdx) / nrOfBlocksInPattern;
+			var nrOfBlocksAfterPattern = nrOfBlocks - firstIdx - (nrOfRepetitions * nrOfBlocksInPattern);
+			var heightAfterPattern = patternHeights[firstIdx + (int)nrOfBlocksAfterPattern] - patternHeights[firstIdx - 1];
+			
+//			var expected = 1585635; // after 1.000.000
+//
+//			new
+//			{
+//				firstIdx,
+//				heightBeforePattern,
+//				secondIdx,
+//				nrOfBlocksInPattern,
+//				patternHeight,
+//				nrOfRepetitions,
+//				nrOfBlocksAfterPattern,
+//				heightAfterPattern,
+//				
+//				expected,
+//				actual = heightBeforePattern + (nrOfRepetitions * patternHeight) + heightAfterPattern,
+//				diff = expected - (heightBeforePattern + (nrOfRepetitions * patternHeight) + heightAfterPattern)
+//			}.Dump();
+
+			return heightBeforePattern + (nrOfRepetitions * patternHeight) + heightAfterPattern;
+		}
+		patternIdx.Add(pattern);
+		patternHeights.Add(height + removedLines);
+
 
 		for (int j = 0; j < rock.Length; j++)
 		{
@@ -59,26 +106,12 @@ public long GetHeight(string input, long nrOfBlocks)
 		}
 		//Print(lines, null, start);
 
-		if (i == 100)
-		{
-			patternStart.AddRange(lines.Take(height));
-			patternEndIndex = moveIndex;
-		}
-		else if (patternEndIndex == moveIndex && Compare(lines, patternStart, height) > 10)
-		{	
-			throw new Exception($"{i} - {height}".ToString());
-		}
-
 		while (lines.Count > 10000)
 		{
 			lines.RemoveAt(0);
 			height--;
 			removedLines++;
 		}
-
-		if (i == 100000000) "100.000.000".Dump();
-		if (i == 500000000) "500.000.000".Dump();
-		if (i == 1000000000) "1.000.000.000".Dump();
 	}
 
 	return height + removedLines;
