@@ -39,19 +39,89 @@ for (;; minutes++)
         throw new Exception($"No more candidates means something went wrong (minute {minutes})");
     }
 
-    Console.WriteLine($"minute: {minutes}");
-    valley.Render(candidates);
+    // Console.WriteLine($"minute: {minutes}");
+    // valley.Render(candidates);
 
     if (candidates.Contains(end))
     {
         break;
     }
-
-    // if end is reached -> count minutes
 }
 
 Console.WriteLine();
 Console.WriteLine($"part 1: {minutes}");
+
+++minutes;
+candidates.Clear();
+candidates.Add(end);
+
+for (;; minutes++)
+{
+    valley.Update();
+
+    // Add valid target positions
+    List<Position> temp = new();
+
+    foreach (Position candidate in candidates)
+    {
+        temp.AddRange(valley.WalkablePositions(candidate));
+    }
+
+    candidates.Clear();
+    candidates.AddRange(temp.Distinct());
+
+    if (candidates.Count <= 0)
+    {
+        throw new Exception($"No more candidates means something went wrong (minute {minutes})");
+    }
+
+    // Console.WriteLine($"minute: {minutes}");
+    // valley.Render(candidates);
+
+    if (candidates.Contains(start))
+    {
+        break;
+    }
+}
+
+Console.WriteLine($"back at start: {minutes}");
+
+minutes++;
+candidates.Clear();
+candidates.Add(start);
+
+for (;; minutes++)
+{
+    valley.Update();
+
+    // Add valid target positions
+    List<Position> temp = new();
+
+    foreach (Position candidate in candidates)
+    {
+        temp.AddRange(valley.WalkablePositions(candidate));
+    }
+
+
+    candidates.Clear();
+    candidates.AddRange(temp.Distinct());
+
+    if (candidates.Count <= 0)
+    {
+        throw new Exception($"No more candidates means something went wrong (minute {minutes})");
+    }
+
+    // Console.WriteLine($"minute: {minutes}");
+    // valley.Render(candidates);
+
+    if (candidates.Contains(end))
+    {
+        break;
+    }
+}
+
+Console.WriteLine();
+Console.WriteLine($"part 2: {minutes}");
 
 internal class Valley
 {
@@ -163,7 +233,7 @@ internal class Valley
         bool Valid(Position p) => InRange(p) && Walkable(p);
 
         bool Walkable(Position p) => blizzard[p.Row, p.Col] == Blizzard.None;
-        bool InRange(Position p) => p.Row > 0 && p.Row < Rows && p.Col > 0 && p.Col < Columns;
+        bool InRange(Position p) => p.Row >= 0 && p.Row < Rows && p.Col >= 0 && p.Col < Columns;
     }
 
     private int RowUp(int row) => Decrease(row, Rows);
