@@ -2,22 +2,56 @@
 {
     new("./testInput.txt"),
     new("./testInput2.txt"),
+    new("./testInput3.txt"),
     new("./input.txt")
 };
 
-IList<string> inputLines = File.ReadLines(inputs[2].Path).ToArray();
+IList<string> inputLines = File.ReadLines(inputs[3].Path).ToArray();
 Valley valley = new(inputLines);
 
 // Get start and end pos
 
-for (int i = 0; i < 3; i++)
+Position start = new(1, 0);
+Position end = new(valley.Columns - 2, valley.Rows - 1);
+
+
+List<Position> candidates = new() { start };
+
+int minutes = 1;
+for (;; minutes++)
 {
     valley.Update();
+
     // Add valid target positions
+    List<Position> temp = new();
+
+    foreach (Position candidate in candidates)
+    {
+        temp.AddRange(valley.WalkablePositions(candidate));
+    }
+
+
+    candidates.Clear();
+    candidates.AddRange(temp.Distinct());
+
+    if (candidates.Count <= 0)
+    {
+        throw new Exception($"No more candidates means something went wrong (minute {minutes})");
+    }
+
+    Console.WriteLine($"minute: {minutes}");
+    valley.Render(candidates);
+
+    if (candidates.Contains(end))
+    {
+        break;
+    }
 
     // if end is reached -> count minutes
 }
 
+Console.WriteLine();
+Console.WriteLine($"part 1: {minutes}");
 
 internal class Valley
 {
@@ -44,13 +78,26 @@ internal class Valley
         shadowBlizzard = new Blizzard[rowCount, columnCount];
     }
 
-    public void Render()
+    public void Render() => Render(Array.Empty<Position>());
+
+    public void Render(IList<Position> candidates)
     {
         for (int row = 0; row < Rows; row++)
         {
             for (int col = 0; col < Columns; col++)
             {
-                Console.Write(BlizzardHelpers.ToChar(blizzard[row, col]));
+                Blizzard value = blizzard[row, col];
+
+                if (candidates.Contains(new Position(col, row)))
+                {
+                    Console.Write(value == Blizzard.None
+                        ? 'E'
+                        : '!');
+                }
+                else
+                {
+                    Console.Write(BlizzardHelpers.ToChar(value));
+                }
             }
 
             Console.WriteLine();
@@ -67,15 +114,15 @@ internal class Valley
             {
                 Blizzard val = Blizzard.None;
 
-                // if (shadowBlizzard[RowDown(row), col].Contains(Blizzard.Up))
-                // {
-                //     val = val.Add(Blizzard.Up);
-                // }
-                //
-                // if (shadowBlizzard[RowUp(row), col].Contains(Blizzard.Down))
-                // {
-                //     val = val.Add(Blizzard.Down);
-                // }
+                if (shadowBlizzard[RowDown(row), col].Contains(Blizzard.Up))
+                {
+                    val = val.Add(Blizzard.Up);
+                }
+
+                if (shadowBlizzard[RowUp(row), col].Contains(Blizzard.Down))
+                {
+                    val = val.Add(Blizzard.Down);
+                }
 
                 if (shadowBlizzard[row, ColumnLeft(col)].Contains(Blizzard.Right))
                 {
@@ -90,6 +137,33 @@ internal class Valley
                 blizzard[row, col] = val;
             }
         }
+    }
+
+    public IEnumerable<Position> WalkablePositions(Position input)
+    {
+        if (Walkable(input))
+            yield return input;
+
+        Position up = input with { Row = input.Row - 1 };
+        if (Valid(up))
+            yield return up;
+
+        Position down = input with { Row = input.Row + 1 };
+        if (Valid(down))
+            yield return down;
+
+        Position left = input with { Col = input.Col - 1 };
+        if (Valid(left))
+            yield return left;
+
+        Position right = input with { Col = input.Col + 1 };
+        if (Valid(right))
+            yield return right;
+
+        bool Valid(Position p) => InRange(p) && Walkable(p);
+
+        bool Walkable(Position p) => blizzard[p.Row, p.Col] == Blizzard.None;
+        bool InRange(Position p) => p.Row > 0 && p.Row < Rows && p.Col > 0 && p.Col < Columns;
     }
 
     private int RowUp(int row) => Decrease(row, Rows);
