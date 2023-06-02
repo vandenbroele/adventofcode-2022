@@ -8,7 +8,7 @@ Input[] inputs =
 };
 
 List<Blueprint> blueprints = File.ReadLines(inputs[1].Path).Select(ParseBlueprint).ToList();
-
+Stopwatch totalTime = Stopwatch.StartNew();
 // Part 1
 const int part1Minutes = 24;
 int part1Total = 0;
@@ -26,7 +26,6 @@ foreach (Blueprint blueprint in blueprints)
         state,
         blueprint,
         part1Minutes,
-        new Dictionary<Resources, (int result, int minutes)>(),
         ref brol,
         true, true, true);
     Console.WriteLine(
@@ -54,7 +53,6 @@ foreach (Blueprint blueprint in blueprints.Take(3))
         state,
         blueprint,
         part2Minutes,
-        new Dictionary<Resources, (int result, int minutes)>(),
         ref brol,
         true, true, true);
 
@@ -66,26 +64,17 @@ foreach (Blueprint blueprint in blueprints.Take(3))
 Console.WriteLine($"part 2: {total}");
 
 
+Console.WriteLine($"completed in a total of {totalTime.Elapsed}");
+
 static int SolveGeodes(
     State state,
     Blueprint blueprint,
     int maxMinutes,
-    IDictionary<Resources, (int result, int minutes)> memo,
     ref int maxGeodes,
     bool allowOre, bool allowClay, bool allowObsidian)
 {
-    if (memo.TryGetValue(state.Resources, out (int result, int minutes) cachedValue))
-    {
-        if (state.Minute > cachedValue.minutes)
-        {
-            // Console.WriteLine("returning from cache");
-            return cachedValue.result;
-        }
-    }
-
     if (state.Minute >= maxMinutes)
     {
-        // Console.WriteLine($"found an end result of: {state.Resources.Geodes}");
         return state.Resources.Geodes;
     }
 
@@ -107,7 +96,7 @@ static int SolveGeodes(
         {
             result = int.Max(
                 result,
-                SolveGeodes(alteredState, blueprint, maxMinutes, memo, ref maxGeodes, true, true, true));
+                SolveGeodes(alteredState, blueprint, maxMinutes, ref maxGeodes, true, true, true));
         }
     }
 
@@ -120,7 +109,7 @@ static int SolveGeodes(
         {
             result = int.Max(
                 result,
-                SolveGeodes(alteredState, blueprint, maxMinutes, memo, ref maxGeodes, true, true, true));
+                SolveGeodes(alteredState, blueprint, maxMinutes, ref maxGeodes, true, true, true));
         }
     }
 
@@ -133,7 +122,7 @@ static int SolveGeodes(
         {
             result = int.Max(
                 result,
-                SolveGeodes(alteredState, blueprint, maxMinutes, memo, ref maxGeodes, true, true, true));
+                SolveGeodes(alteredState, blueprint, maxMinutes, ref maxGeodes, true, true, true));
         }
     }
 
@@ -142,18 +131,15 @@ static int SolveGeodes(
         State alteredState = state.Step().BuildGeodeBot(blueprint);
         result = int.Max(
             result,
-            SolveGeodes(alteredState, blueprint, maxMinutes, memo, ref maxGeodes, true, true, true));
+            SolveGeodes(alteredState, blueprint, maxMinutes, ref maxGeodes, true, true, true));
     }
 
     // Do nothing
     result = int.Max(
         result,
         SolveGeodes(
-            state.Step(), blueprint, maxMinutes, memo, ref maxGeodes,
+            state.Step(), blueprint, maxMinutes, ref maxGeodes,
             !couldBuildOre, !couldBuildClay, !couldBuildObsidian));
-
-    memo[state.Resources] = (result, state.Minute);
-    // Console.WriteLine($"caching state. {memo.Count} states cached");
 
     maxGeodes = int.Max(maxGeodes, result);
 
